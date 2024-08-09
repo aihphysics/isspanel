@@ -1,0 +1,16 @@
+[package]
+name = "isspanel"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.14", features = ["derive"] }
+lightstreamer-client = "0.1.9"
+ratatui = "0.28.0"
+tokio = { version = "1.39.2", features = ["full"] } 
+
+[[bin]]
+name = "isspanel"
+path = "src/main.rs"
