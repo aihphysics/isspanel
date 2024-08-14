@@ -2,7 +2,7 @@
 
 //pub static ISS_TELEMS: [&str; 1] = ["USLAB000058"];
 
-use tokio::sync::watch::Sender;
+use tokio::sync::mpsc::Sender;
 
 pub static ISS_TELEMS: [&str; 20] = [
     "AIRLOCK000001",
@@ -24,7 +24,8 @@ pub static ISS_TELEMS: [&str; 20] = [
     "AIRLOCK000017",
     "AIRLOCK000018",
     "AIRLOCK000019",
-    "AIRLOCK000020" ];
+    "AIRLOCK000020",
+];
 //    "AIRLOCK000021",
 //    "AIRLOCK000022",
 //    "AIRLOCK000023",
@@ -346,37 +347,36 @@ pub static ISS_TELEMS: [&str; 20] = [
 
 use lightstreamer_client::item_update::ItemUpdate;
 use lightstreamer_client::subscription_listener::SubscriptionListener;
+use std::fmt::Debug;
+use std::str::FromStr;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
-//pub struct ISSListener<T>{
-//  tx: Arc( Sender<T> ),
-//}
-pub struct ISSListener {
-    //tx: Arc( Sender<T> ),
+pub struct ISSListener<T: Sync + Send + FromStr> {
+    tx: Arc<Sender<T>>,
 }
 
-//impl<T> ISSListener<T>{
-//  pub fn new( tx: Sender<T> ) -> ISSListener<T> {
-//    ISSListener::<T> { tx: Arc::new( &tx ) }
-//  }
-//}
+impl<T: Sync + Send + FromStr> ISSListener<T> {
+    pub fn new(tx: Sender<T>) -> ISSListener<T> {
+        ISSListener::<T> { tx: Arc::new(tx) }
+    }
+}
 
-// this needs checked
-//impl<T> SubscriptionListener for ISSListener<T> {
-impl SubscriptionListener for ISSListener {
+impl<T: Sync + Send + FromStr> SubscriptionListener for ISSListener<T> {
     fn on_item_update(&self, update: &ItemUpdate) {
         let not_available = "N/A".to_string();
-        //let item_name = update.item_name.clone().unwrap_or(not_available.clone());
         let fields = vec!["TimeStamp", "Value"];
-        //let mut output = String::new();
         for field in fields {
-            let value = (update.get_value(field).unwrap_or(&not_available))
-                .parse::<f32>()
-                .unwrap();
-            println!("{value}");
+            let value = (update.get_value(field).unwrap_or(&not_available)).parse::<T>();
+            match value {
+                Ok(val) => self.tx.blocking_send(val).unwrap(),
+                Err(_) => panic!(
+                    "Send across thread bound failed for updated value {}.",
+                    field
+                ),
+            }
             //output.push_str(&format!("{}: {}, ", field, value.to_string()));
         }
-
         //println!("{}, {}", item_name, output);
     }
 }
