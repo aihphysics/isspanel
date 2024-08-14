@@ -99,10 +99,13 @@ fn get_client() -> (Arc<Mutex<LightstreamerClient>>, Receiver<f32> ) {
     ( Arc::new(Mutex::new(client)), rx )
 }
 
+use std::task::Poll;
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let close = Arc::new(Notify::new());
-    let ( mut client, mut rx ) = get_client();
+    let ( mut client, rx ) = get_client();
+    //client.lock().await.connect( close );
 
     let cli = client.clone();
     tokio::task::spawn(async move {
@@ -110,15 +113,7 @@ async fn main() -> Result<()> {
         cli.connect(close).await.unwrap();
     });
 
-    for _ in 0..1000 {
-      let val = rx.recv().await.unwrap();
-      println!( "recieved: {}", val );
-      thread::sleep(time::Duration::from_millis(100));
-    }
-
-    Ok(())
-}
-
+    thread::sleep(time::Duration::from_millis(100000));
     // ratatui testing
 
     //stdout().execute(EnterAlternateScreen)?;
@@ -156,4 +151,6 @@ async fn main() -> Result<()> {
     //stdout().execute(LeaveAlternateScreen)?;
     //disable_raw_mode()?;
 
+    Ok(())
+}
 //.instrument(tracing::info_span!("connect"))

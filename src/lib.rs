@@ -369,7 +369,7 @@ impl<T: Sync + Send + FromStr> SubscriptionListener for ISSListener<T> {
         for field in fields {
             let value = (update.get_value(field).unwrap_or(&not_available)).parse::<T>();
             match value {
-                Ok(val) => self.tx.blocking_send(val).unwrap(),
+                Ok(val) => self.tx.try_send(val).unwrap(),
                 Err(_) => panic!(
                     "Send across thread bound failed for updated value {}.",
                     field
